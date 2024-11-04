@@ -1,7 +1,7 @@
 //Sistema de Segurança com Senha via Bluetooth
 //Mateus de Jesus Pereira ADS II
 
-//=============================================================================================
+//============================================================================================
 #include <SoftwareSerial.h>
 SoftwareSerial bluetooth(10,11); //Porta 10 RX e 11 TX
 //Porque não 0 ou 1?
