@@ -4,7 +4,11 @@
 //=============================================================================================
 #include <SoftwareSerial.h>
 SoftwareSerial bluetooth(10,11); //Porta 10 RX e 11 TX
-//Porque não 0 ou 1? Pode gerar interferência na programação já que são utilizados para comunicação serial com o computador via USB
+//Porque não 0 ou 1?
+//Pode gerar interferência na programação, já que são utilizados para comunicação serial com o computador via USB
+
+//#define é uma substituição de texto, mais leve e sem tipo, útil para valores constantes simples.
+//const int cria uma constante de tipo específico e permite a verificação de tipo, tornando o código mais seguro e legível.
 
 //Definição das entradas
 const int pirPin = 7; //Pino do sensor de presença
@@ -15,11 +19,12 @@ const int ledVdPin = 2; //Pino do LED verde
 
 //Variáveis
 String senhaCorreta = "2001"; //Definição da senha de acesso
-String senhaDigitada = ""; //Armazenar a entrada do usuário
-bool aguardandoSenha = false; //Booleano é variável que controla o estado do sistema (true ou false)
-bool senhaSolicitada = false; //Controlar mensagem da solicitação da senha
+String senhaDigitada = ""; //Armazena a senha digitada pelo usuário
+bool aguardandoSenha = false; //Variável booleana para controlar o fluxo de senha (true ou false)
+bool senhaSolicitada = false; //Variável booleana para controlar o fluxo de senha (true ou false)
+//Booleana evitam que o sistema continue solicitando a senha desnecessariamente enquanto espera por uma entrada do usuário.
 
-void setup() {
+void setup() { //Configuração dos pinos
  pinMode(pirPin, INPUT); //Configura o pino do Sensor Pir como entrada
  pinMode(magPin, INPUT); //Configura o pino do Sensor magnético
  pinMode(buzzerPin, OUTPUT); //Configura o pino do buzzer como saída
@@ -28,20 +33,23 @@ void setup() {
 
  bluetooth.begin(9600);// Inicia a comunicação serial com o Bluetooth
  Serial.begin(9600);//Inicializa a comunicação serial com o computador, definindo uma taxa de transmissão de 9600 bits por segundo
- bluetooth.println("Sistema de segurança ativado.");
+ bluetooth.println("Sistema de segurança Ativado."); // Imprime a mensagem no app após o usuário conectar-se
+ Serial.println("Sistema de segurança Ativado."); // Imprime a mensagem no app após o usuário conectar-se
 }
 
 void loop() {
+  
   //Verificação dos sensores PIR e magnético
   if (digitalRead(pirPin) == HIGH || digitalRead(magPin) == HIGH) {
-  //digitalRead: Lê o valor de um pino digital especificado, que pode ser HIGH ou LOW;
+  //digitalRead: Lê o estado de um pino digital, que pode ser HIGH ou LOW;
       if(!senhaSolicitada){
-        Serial.println("Movimento detectado/ intrusão detectada!");
-        bluetooth.println("Movimento detectado/ intrusão detectada!");
-        digitalWrite(ledVmPin, HIGH);
-        tone(buzzerPin,500);
+        Serial.println("Movimento detectado/ intrusão detectada!"); //Imprime mensagem no bluetooth
+        bluetooth.println("Movimento detectado/ intrusão detectada!"); //Imprime mensagem no serial
+        digitalWrite(ledVmPin, HIGH); //Acende led
+        tone(buzzerPin,500);//Toca som no buzzer
         delay(2000);
         bluetooth.println("Para continuar, digite sua senha de acesso:");
+        Serial.println("Para continuar, digite sua senha de acesso:");
         senhaSolicitada = true; // Marca que a senha foi solicitada
         }
         aguardandoSenha = true; // Ativa o estado de espera pela senha
@@ -49,37 +57,43 @@ void loop() {
 
   // Verifica se estamos esperando a senha
   if (aguardandoSenha) {
-      if (bluetooth.available()){
-          char c = bluetooth.read(); //ler os caracteres
-          if (c == '\n') { // Verifica se é uma nova linha (final da entrada)
-          senhaDigitada.trim(); //Remover espaços em branco
-          verificarSenha();
-          senhaDigitada = ""; //Limpa a entrada após verificação
-          aguardandoSenha = false;
+      if (bluetooth.available()){ //É usado para verificar se o usuário enviou algum dado via Bluetooth.
+          char c = bluetooth.read(); //Ler os caracteres digitados
+          if (c == '\n') { //Verifica se é uma nova linha (final da senha)
+          senhaDigitada.trim(); //Remove os espaços em branco
+          verificarSenha(); //Análise da senha
+          senhaDigitada = ""; //Limpa a senha digitada após verificação
+          aguardandoSenha = false; //Define o estado do sistema após a verificação da senha
           senhaSolicitada = false;
           digitalWrite(ledVmPin, LOW);
       } else {
-            senhaDigitada += c; //adiciona caractere a senha digitada
+            senhaDigitada += c; //adiciona caractere lido (c) à variável senhaDigitada
         }
      }
   }
 }
 void verificarSenha(){
-  if (senhaDigitada == senhaCorreta) { //Compararação direta entre strings
-  noTone(buzzerPin);
-  digitalWrite(ledVmPin, LOW);
+  if (senhaDigitada == senhaCorreta) { //Compararação entre strings
+  noTone(buzzerPin); //Desliga o buzzer
+  digitalWrite(ledVmPin, LOW); //Desliga o led vermelho
+  bluetooth.println("Sistema de segurança Desativado."); //Desativa o sistema
   bluetooth.println("Acesso permitido. Seja bem-vindo (a)!");
-  digitalWrite(ledVdPin, HIGH);
-  tone(buzzerPin, 1000);
+  Serial.println("Sistema de segurança Desativado.");
+  Serial.println("Acesso permitido. Seja bem-vindo (a)!");
+  digitalWrite(ledVdPin, HIGH); //Acende led verde
+  tone(buzzerPin, 1000); //Som de acesso
   delay(1000);
   noTone(buzzerPin);
   digitalWrite(ledVdPin, LOW);
 
   } else {
+    digitalWrite(ledVmPin, HIGH);
     tone(buzzerPin, 500);
     delay(1000);
-    noTone(buzzerPin);
     bluetooth.println("Senha incorreta. Tente novamente.");
+    Serial.println("Senha incorreta. Tente novamente.");
+    delay(1000);
+    bluetooth.println("Aproxime-se novamente do Sensor");
+    Serial.println("Aproxime-se novamente do Sensor");
     }
-    aguardandoSenha = true;
 }
